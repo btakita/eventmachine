@@ -114,19 +114,7 @@ require 'shellwords'
 #
 # Here's a fully-functional echo server implemented in EventMachine:
 # 
-#       require 'rubygems'
-#       require 'eventmachine'
-# 
-#       module EchoServer
-#         def receive_data data
-#           send_data ">>>you sent: #{data}"
-#           close_connection if data =~ /quit/i
-#         end
-#       end
-# 
-#       EventMachine::run {
-#         EventMachine::start_server "192.168.0.100", 8081, EchoServer
-#       }
+#   :include: echo_server.rb
 # 
 # What's going on here? Well, we have defined the module EchoServer to
 # implement the semantics of the echo protocol (more about that shortly).
@@ -280,14 +268,7 @@ module EventMachine
   # course, since no network clients or servers are defined. Stop the program
   # with Ctrl-C.
   #
-  #  require 'rubygems'
-  #  require 'eventmachine'
-  #
-  #  EventMachine::run {
-  #    puts "Starting the run now: #{Time.now}"
-  #    EventMachine::add_timer 5, proc { puts "Executing timer event: #{Time.now}" }
-  #    EventMachine::add_timer( 10 ) { puts "Executing timer event: #{Time.now}" }
-  #  }
+  #   :include: simple_timer.rb
   #
   #
   #--
@@ -354,42 +335,7 @@ module EventMachine
   #
   # === Usage example
   #
-  #  require 'rubygems'
-  #  require 'eventmachine'
-  #
-  #  module Redmond
-  #  
-  #    def post_init
-  #      puts "We're sending a dumb HTTP request to the remote peer."
-  #      send_data "GET / HTTP/1.1\r\nHost: www.microsoft.com\r\n\r\n"
-  #    end
-  #  
-  #    def receive_data data
-  #      puts "We received #{data.length} bytes from the remote peer."
-  #      puts "We're going to stop the event loop now."
-  #      EventMachine::stop_event_loop
-  #    end
-  #  
-  #    def unbind
-  #      puts "A connection has terminated."
-  #    end
-  #  
-  #  end
-  #  
-  #  puts "We're starting the event loop now."
-  #  EventMachine::run {
-  #    EventMachine::connect "www.microsoft.com", 80, Redmond
-  #  }
-  #  puts "The event loop has stopped."
-  #  
-  # This program will produce approximately the following output:
-  #
-  #  We're starting the event loop now.
-  #  We're sending a dumb HTTP request to the remote peer.
-  #  We received 1440 bytes from the remote peer.
-  #  We're going to stop the event loop now.
-  #  A connection has terminated.
-  #  The event loop has stopped.
+  #   :include: redmond.rb
   #
   #
   def EventMachine::stop_event_loop
@@ -452,36 +398,7 @@ module EventMachine
   # Also, to use this example, be sure to change the server and port parameters
   # to the start_server call to values appropriate for your environment.
   #
-  #  require 'rubygems'
-  #  require 'eventmachine'
-  #
-  #  module LineCounter
-  #  
-  #    MaxLinesPerConnection = 10
-  #  
-  #    def post_init
-  #      puts "Received a new connection"
-  #      @data_received = ""
-  #      @line_count = 0
-  #    end
-  #  
-  #    def receive_data data
-  #      @data_received << data
-  #      while @data_received.slice!( /^[^\n]*[\n]/m )
-  #        @line_count += 1
-  #        send_data "received #{@line_count} lines so far\r\n"
-  #        @line_count == MaxLinesPerConnection and close_connection_after_writing
-  #      end
-  #    end
-  #  
-  #  end # module LineCounter
-  #  
-  #  EventMachine::run {
-  #    host,port = "192.168.0.100", 8090
-  #    EventMachine::start_server host, port, LineCounter
-  #    puts "Now accepting connections on address #{host}, port #{port}..."
-  #    EventMachine::add_periodic_timer( 10 ) { $stderr.write "*" }
-  #  }
+  #   :include: linecounter.rb
   #  
   #
   def EventMachine::start_server server, port, handler=nil, *args, &block
@@ -551,38 +468,7 @@ module EventMachine
   # (antisocially) ends the event loop, which automatically drops the connection
   # (and incidentally calls the connection's unbind method).
   # 
-  #  require 'rubygems'
-  #  require 'eventmachine'
-  #  
-  #  module DumbHttpClient
-  #  
-  #    def post_init
-  #      send_data "GET / HTTP/1.1\r\nHost: _\r\n\r\n"
-  #      @data = ""
-  #    end
-  #  
-  #    def receive_data data
-  #      @data << data
-  #      if  @data =~ /[\n][\r]*[\n]/m
-  #        puts "RECEIVED HTTP HEADER:"
-  #        $`.each {|line| puts ">>> #{line}" }
-  #  
-  #        puts "Now we'll terminate the loop, which will also close the connection"
-  #        EventMachine::stop_event_loop
-  #      end
-  #    end
-  #  
-  #    def unbind
-  #      puts "A connection has terminated"
-  #    end
-  #  
-  #  end # DumbHttpClient
-  #  
-  #  
-  #  EventMachine::run {
-  #    EventMachine::connect "www.bayshorenetworks.com", 80, DumbHttpClient
-  #  }
-  #  puts "The event loop has ended"
+  #   :include: dumb_http_client.rb
   #  
   #
   # There are times when it's more convenient to define a protocol handler
@@ -1618,5 +1504,3 @@ require 'protocols/smtpserver'
 require 'protocols/saslauth'
 
 require 'em/processes'
-
-
