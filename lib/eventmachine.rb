@@ -160,6 +160,35 @@ require 'shellwords'
 # 
 module EventMachine
 
+  # Start the EventMachine reactor (optionally in the foreground), unless it is
+  # running already.
+  #
+  def EventMachine::start background = true, &block
+    if reactor_running?
+      return unless block
+
+      next_tick do
+        begin
+          block.call
+        rescue Exception => e
+          puts e.inspect
+          raise
+        end
+      end
+
+      $eventmachine_reactor.join unless background
+    else
+      if background
+        $eventmachine_reactor = Thread.new do
+          Thread.current.abort_on_exception = true
+          run(&block)
+        end
+      else
+        run(&block)
+      end
+    end
+  end
+
 
 	# EventMachine::run initializes and runs an event loop.
 	# This method only returns if user-callback code calls stop_event_loop.
@@ -202,6 +231,8 @@ module EventMachine
 	# a C++ runtime error.
 	#
 	def EventMachine::run &block
+	  return block ? block.call : nil if @reactor_running
+
 		@conns = {}
 		@acceptors = {}
 		@timers = {}
