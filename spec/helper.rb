@@ -1,6 +1,8 @@
+$:.unshift File.join(File.dirname(__FILE__), '../lib')
+require 'eventmachine'
+
 require 'rubygems'
 require 'bacon'
-require File.join(File.dirname(__FILE__), '../lib/eventmachine')
 
 shared 'eventmachine' do
   $bacon_thread = Thread.current
