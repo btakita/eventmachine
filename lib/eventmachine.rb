@@ -306,6 +306,8 @@ module EventMachine
   # Changed 04Oct06: We now pass the interval as an integer number of milliseconds.
   #
   def EventMachine::add_timer *args, &block
+    start
+
     interval = args.shift
     code = args.shift || block
     if code
@@ -333,6 +335,8 @@ module EventMachine
   #  }
   #
   def EventMachine::add_periodic_timer *args, &block
+    start
+
     interval = args.shift
     code = args.shift || block
     if code
@@ -433,6 +437,8 @@ module EventMachine
   #  
   #
   def EventMachine::start_server server, port, handler=nil, *args, &block
+    start
+
     klass = if (handler and handler.is_a?(Class))
       handler
     else
@@ -461,6 +467,8 @@ module EventMachine
   end
 
   def EventMachine::start_unix_domain_server filename, handler=nil, *args, &block
+    start
+
     klass = if (handler and handler.is_a?(Class))
       handler
     else
@@ -544,6 +552,8 @@ module EventMachine
   # if at all possible.
   #
   def EventMachine::connect server, port=nil, handler=nil, *args
+    start
+
     begin
       port = Integer(port)
     rescue ArgumentError, TypeError
@@ -685,6 +695,8 @@ module EventMachine
 	# out that this originally did not take a class but only a module.
 	#
 	def self::open_datagram_socket address, port, handler=nil, *args
+		start
+
 		klass = if (handler and handler.is_a?(Class))
 			handler
 		else
