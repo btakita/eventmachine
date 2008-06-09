@@ -39,100 +39,100 @@ class TestTimers < Test::Unit::TestCase
   end
 
   def test_timer_with_block
-	  x = false
-	  EventMachine.run {
-		  EventMachine::Timer.new(0.25) {
-		  	x = true
-			EventMachine.stop
-	  	}
-	  }
-	  assert x
+    x = false
+    EventMachine.run {
+      EventMachine::Timer.new(0.25) {
+        x = true
+        EventMachine.stop
+      }
+    }
+    assert x
   end
 
   def test_timer_with_proc
-	  x = false
-	  EventMachine.run {
-		  EventMachine::Timer.new(0.25, proc {
-		  	x = true
-			EventMachine.stop
-	  	})
-	  }
-	  assert x
+    x = false
+    EventMachine.run {
+      EventMachine::Timer.new(0.25, proc {
+        x = true
+        EventMachine.stop
+      })
+    }
+    assert x
   end
 
   def test_timer_cancel
-	  x = true
-	  EventMachine.run {
-		  timer = EventMachine::Timer.new(0.25, proc { x = false })
-		  timer.cancel
-		  EventMachine::Timer.new(0.5, proc {EventMachine.stop})
-	  }
-	  assert x
+    x = true
+    EventMachine.run {
+      timer = EventMachine::Timer.new(0.25, proc { x = false })
+      timer.cancel
+      EventMachine::Timer.new(0.5, proc {EventMachine.stop})
+    }
+    assert x
   end
 
   def test_periodic_timer
-	  x = 0
-	  EventMachine.run {
-		  EventMachine::PeriodicTimer.new(0.1, proc {
-		  	x += 1
-			EventMachine.stop if x == 4
-		  })
-	  }
-	  assert( x == 4 )
+    x = 0
+    EventMachine.run {
+      EventMachine::PeriodicTimer.new(0.1, proc {
+        x += 1
+        EventMachine.stop if x == 4
+      })
+    }
+    assert( x == 4 )
   end
 
   def test_periodic_timer_cancel
-	  x = 0
-	  EventMachine.run {
-		pt = EventMachine::PeriodicTimer.new(5, proc { x += 1 })
-		pt.cancel
-		EventMachine::Timer.new(0.5) {EventMachine.stop}
-	  }
-	  assert( x == 0 )
+    x = 0
+    EventMachine.run {
+      pt = EventMachine::PeriodicTimer.new(5, proc { x += 1 })
+      pt.cancel
+      EventMachine::Timer.new(0.5) {EventMachine.stop}
+    }
+    assert( x == 0 )
   end
 
   def test_periodic_timer_self_cancel
-	  x = 0
-	  EventMachine.run {
-		pt = EventMachine::PeriodicTimer.new(0.1) {
-		  x += 1
-		  if x == 4
-			  pt.cancel
-			  EventMachine.stop
-		  end
-	  	}
-	  }
-	  assert( x == 4 )
+    x = 0
+    EventMachine.run {
+      pt = EventMachine::PeriodicTimer.new(0.1) {
+        x += 1
+        if x == 4
+          pt.cancel
+          EventMachine.stop
+        end
+      }
+    }
+    assert( x == 4 )
   end
 
 
-  	# This test is only applicable to compiled versions of the reactor.
-	# Pure ruby versions have no built-in limit on the number of outstanding timers.
-	#
-	def test_timer_change_max_outstanding
-		ten_thousand_timers = proc {
-			10000.times {
-				EM.add_timer(5) {}
-			}
-		}
-		EM.run {
-			if EM.library_type == :pure_ruby
-				ten_thousand_timers.call
-			else
-				assert_raise( RuntimeError ) {
-					ten_thousand_timers.call
-				}
-			end
-			EM.stop
-		}
+  # This test is only applicable to compiled versions of the reactor.
+  # Pure ruby versions have no built-in limit on the number of outstanding timers.
+  #
+  def test_timer_change_max_outstanding
+    ten_thousand_timers = proc {
+      10000.times {
+        EM.add_timer(5) {}
+      }
+    }
+    EM.run {
+      if EM.library_type == :pure_ruby
+        ten_thousand_timers.call
+      else
+        assert_raise( RuntimeError ) {
+          ten_thousand_timers.call
+        }
+      end
+      EM.stop
+    }
 
-		EM.set_max_timers( 10001 )
+    EM.set_max_timers( 10001 )
 
-		EM.run {
-			ten_thousand_timers.call
-			EM.stop
-		}
-	end
+    EM.run {
+      ten_thousand_timers.call
+      EM.stop
+    }
+  end
 
 end
 

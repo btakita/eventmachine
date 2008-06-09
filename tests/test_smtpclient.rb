@@ -30,52 +30,52 @@ require 'test/unit'
 
 class TestSmtpClient < Test::Unit::TestCase
 
-	Localhost = "127.0.0.1"
-	Localport = 9801
+  Localhost = "127.0.0.1"
+  Localport = 9801
 
-	def setup
-	end
+  def setup
+  end
 
-	def teardown
-	end
+  def teardown
+  end
 
-	def test_a
-		# No real tests until we have a server implementation to test against.
-		# This is what the call looks like, though:
+  def test_a
+    # No real tests until we have a server implementation to test against.
+    # This is what the call looks like, though:
 
-		EM.run {
-			d = EM::Protocols::SmtpClient.send :domain=>"example.com",
-				:host=>Localhost,
-				:port=>Localport, # optional, defaults 25
-				:starttls=>true,
-				:from=>"sender@example.com",
-				:to=> ["to_1@example.com", "to_2@example.com"],
-				:header=> {"Subject" => "This is a subject line"},
-				:body=> "This is the body of the email",
-				:verbose=>true
-			d.errback {|e|
-				p e
-				EM.stop
-			}
-		}
-	end
+    EM.run {
+      d = EM::Protocols::SmtpClient.send :domain=>"example.com",
+        :host=>Localhost,
+        :port=>Localport, # optional, defaults 25
+        :starttls=>true,
+        :from=>"sender@example.com",
+        :to=> ["to_1@example.com", "to_2@example.com"],
+        :header=> {"Subject" => "This is a subject line"},
+        :body=> "This is the body of the email",
+        :verbose=>true
+      d.errback {|e|
+        p e
+        EM.stop
+      }
+    }
+  end
 
-	def test_content
+  def test_content
 
-		EM.run {
-			d = EM::Protocols::SmtpClient.send :domain=>"example.com",
-				:host=>Localhost,
-				:port=>Localport, # optional, defaults 25
-				:starttls=>true,
-				:from=>"sender@example.com",
-				:to=> ["to_1@example.com", "to_2@example.com"],
-				:content => ["Subject: xxx\r\n\r\ndata\r\n.\r\n"],
-				:verbose=>true
-			d.errback {|e|
-				p e
-				EM.stop
-			}
-		}
-	end
+    EM.run {
+      d = EM::Protocols::SmtpClient.send :domain=>"example.com",
+        :host=>Localhost,
+        :port=>Localport, # optional, defaults 25
+        :starttls=>true,
+        :from=>"sender@example.com",
+        :to=> ["to_1@example.com", "to_2@example.com"],
+        :content => ["Subject: xxx\r\n\r\ndata\r\n.\r\n"],
+        :verbose=>true
+      d.errback {|e|
+        p e
+        EM.stop
+      }
+    }
+  end
 
 end

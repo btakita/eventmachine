@@ -98,9 +98,9 @@ class TestBasic < Test::Unit::TestCase
   # the loop automatically. Contrast with EventMachine#run, which keeps running the reactor
   # even after the supplied block completes.
   def test_run_block
-	  a = nil
-	  EM.run_block { a = "Worked" }
-	  assert a
+    a = nil
+    EM.run_block { a = "Worked" }
+    assert a
   end
 
 
@@ -117,24 +117,24 @@ class TestBasic < Test::Unit::TestCase
   TestPort = 9070
 
   class UnbindError < EM::Connection
-	  def initialize *args
-		  super
-	  end
-	  def connection_completed
-		  close_connection_after_writing
-	  end
-	  def unbind
-		  raise "Blooey"
-	  end
+    def initialize *args
+      super
+    end
+    def connection_completed
+      close_connection_after_writing
+    end
+    def unbind
+      raise "Blooey"
+    end
   end
 
   def xxx_test_unbind_error
-	  assert_raise( RuntimeError ) {
-		  EM.run {
-			  EM.start_server TestHost, TestPort
-			  EM.connect TestHost, TestPort, UnbindError
-		  }
-	  }
+    assert_raise( RuntimeError ) {
+      EM.run {
+        EM.start_server TestHost, TestPort
+        EM.connect TestHost, TestPort, UnbindError
+      }
+    }
   end
 
 end

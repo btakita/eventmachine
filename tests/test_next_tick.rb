@@ -33,26 +33,26 @@ require 'test/unit'
 
 class TestNextTick < Test::Unit::TestCase
 
-	def setup
-	end
+  def setup
+  end
 
-	def teardown
-	end
+  def teardown
+  end
 
-	def test_tick_arg
-		pr = proc {EM.stop}
-		EM.epoll
-		EM.run {
-			EM.next_tick pr
-		}
-		assert true
-	end
+  def test_tick_arg
+    pr = proc {EM.stop}
+    EM.epoll
+    EM.run {
+      EM.next_tick pr
+    }
+    assert true
+  end
 
-	def test_tick_block
-		EM.epoll
-		EM.run {
-			EM.next_tick {EM.stop}
-		}
-		assert true
-	end
+  def test_tick_block
+    EM.epoll
+    EM.run {
+      EM.next_tick {EM.stop}
+    }
+    assert true
+  end
 end

@@ -43,7 +43,8 @@ class TestEventables < Test::Unit::TestCase
   def teardown
   end
 
-  def test_a; end # shut up rake until we define a test.
+  def test_a;
+  end # shut up rake until we define a test.
 
   # TODO, this idea is still half-baked.
   def xxx_test_a
@@ -54,7 +55,7 @@ class TestEventables < Test::Unit::TestCase
       EventMachine.stop
     }
     tester.post_event( :fire1, "$" )
-    
+
     EventMachine.run {
       EventMachine::add_timer(1) {EventMachine.stop}
     }

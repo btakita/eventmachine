@@ -30,8 +30,8 @@ require 'test/unit'
 
 class TestHttpClient < Test::Unit::TestCase
 
-    Localhost = "127.0.0.1"
-    Localport = 9801
+  Localhost = "127.0.0.1"
+  Localport = 9801
 
   def setup
   end
@@ -90,87 +90,87 @@ class TestHttpClient < Test::Unit::TestCase
   # lacking a content-length, just when the content-length was zero.
   #
   class EmptyContent < EventMachine::Connection
-      def initialize *args
-	  super
-      end
-      def receive_data data
-	  send_data "HTTP/1.0 404 ...\r\nContent-length: 0\r\n\r\n"
-	  close_connection_after_writing
-      end
+    def initialize *args
+      super
+    end
+    def receive_data data
+      send_data "HTTP/1.0 404 ...\r\nContent-length: 0\r\n\r\n"
+      close_connection_after_writing
+    end
   end
 
   def test_http_empty_content
-      ok = false
-      EventMachine.run {
-	  EventMachine.start_server "127.0.0.1", 9701, EmptyContent
-	  c = EventMachine::Protocols::HttpClient.send :request, :host => "127.0.0.1", :port => 9701
-	  c.callback {|result|
-	      ok = true
-	      EventMachine.stop
-	  }
+    ok = false
+    EventMachine.run {
+      EventMachine.start_server "127.0.0.1", 9701, EmptyContent
+      c = EventMachine::Protocols::HttpClient.send :request, :host => "127.0.0.1", :port => 9701
+      c.callback {|result|
+        ok = true
+        EventMachine.stop
       }
-      assert ok
+    }
+    assert ok
   end
 
   #---------------------------------------
 
   class PostContent < EventMachine::Protocols::LineAndTextProtocol
-      def initialize *args
-	  super
-	  @lines = []
+    def initialize *args
+      super
+      @lines = []
+    end
+    def receive_line line
+      if line.length > 0
+        @lines << line
+      else
+        process_headers
       end
-      def receive_line line
-	  if line.length > 0
-	      @lines << line
-	  else
-	      process_headers
-	  end
+    end
+    def receive_binary_data data
+      @post_content = data
+      send_response
+    end
+    def process_headers
+      if @lines.first =~ /\APOST ([^\s]+) HTTP\/1.1\Z/
+        @uri = $1.dup
+      else
+        raise "bad request"
       end
-      def receive_binary_data data
-	  @post_content = data
-	  send_response
-      end
-      def process_headers
-	  if @lines.first =~ /\APOST ([^\s]+) HTTP\/1.1\Z/
-	      @uri = $1.dup
-	  else
-	      raise "bad request"
-	  end
-	  @lines.each {|line|
-	      if line =~ /\AContent-length:\s*(\d+)\Z/i
-		  @content_length = $1.dup.to_i
-	      elsif line =~ /\AContent-type:\s*(\d+)\Z/i
-		  @content_type = $1.dup
-	      end
-	  }
+      @lines.each {|line|
+        if line =~ /\AContent-length:\s*(\d+)\Z/i
+          @content_length = $1.dup.to_i
+        elsif line =~ /\AContent-type:\s*(\d+)\Z/i
+          @content_type = $1.dup
+        end
+      }
 
-	  raise "invalid content length" unless @content_length
-	  set_binary_mode @content_length
-      end
-      def send_response
-	  send_data "HTTP/1.1 200 ...\r\nConnection: close\r\nContent-length: 10\r\nContent-type: text/html\r\n\r\n0123456789"
-	  close_connection_after_writing
-      end
+      raise "invalid content length" unless @content_length
+      set_binary_mode @content_length
+    end
+    def send_response
+      send_data "HTTP/1.1 200 ...\r\nConnection: close\r\nContent-length: 10\r\nContent-type: text/html\r\n\r\n0123456789"
+      close_connection_after_writing
+    end
   end
 
   # TODO, this is WRONG. The handler is asserting an HTTP 1.1 request, but the client
   # is sending a 1.0 request. Gotta fix the client
   def test_post
-      response = nil
-      EventMachine.run {
-	  EventMachine.start_server Localhost, Localport, PostContent
-	  EventMachine.add_timer(2) {raise "timed out"}
-	  c = EventMachine::Protocols::HttpClient.request :host=>Localhost,
-	      :port=>Localport, :method=>:post, :request=>"/aaa", :content=>"XYZ",
-	      :content_type=>"text/plain"
-          c.callback {|r|
-	      response = r
-	      EventMachine.stop
-	  }
+    response = nil
+    EventMachine.run {
+      EventMachine.start_server Localhost, Localport, PostContent
+      EventMachine.add_timer(2) {raise "timed out"}
+      c = EventMachine::Protocols::HttpClient.request :host=>Localhost,
+      :port=>Localport, :method=>:post, :request=>"/aaa", :content=>"XYZ",
+      :content_type=>"text/plain"
+      c.callback {|r|
+        response = r
+        EventMachine.stop
       }
+    }
 
-      assert_equal( 200, response[:status] )
-      assert_equal( "0123456789", response[:content] )
+    assert_equal( 200, response[:status] )
+    assert_equal( "0123456789", response[:content] )
   end
 
 

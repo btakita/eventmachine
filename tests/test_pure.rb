@@ -31,7 +31,7 @@ require 'test/unit'
 class TestPure < Test::Unit::TestCase
 
 
-  Host,Port = "0.0.0.0", 9060
+  Host, Port = "0.0.0.0", 9060
 
 
   # These tests are intended to exercise problems that come up in the
@@ -58,10 +58,10 @@ class TestPure < Test::Unit::TestCase
   # because the TCP server opened in the first test will not have been closed.
   #
   def run_exception
-      EM.run {
-        EM.start_server Host, Port
-        raise "an exception"
-      }
+    EM.run {
+      EM.start_server Host, Port
+      raise "an exception"
+    }
   end
   def test_exception_1
     assert_raise( RuntimeError ) { run_exception }
