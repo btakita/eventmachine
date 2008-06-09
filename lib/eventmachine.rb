@@ -114,20 +114,8 @@ require 'shellwords'
 #
 # Here's a fully-functional echo server implemented in EventMachine:
 # 
-#       require 'rubygems'
-#       require 'eventmachine'
-# 
-#       module EchoServer
-#         def receive_data data
-#           send_data ">>>you sent: #{data}"
-#           close_connection if data =~ /quit/i
-#         end
-#       end
-# 
-#       EventMachine::run {
-#         EventMachine::start_server "192.168.0.100", 8081, EchoServer
-#       }
-# 
+#   :include: echo_server.rb
+#
 # What's going on here? Well, we have defined the module EchoServer to
 # implement the semantics of the echo protocol (more about that shortly).
 # The last three lines invoke the event-machine itself, which runs forever
@@ -172,6 +160,34 @@ require 'shellwords'
 # 
 module EventMachine
 
+  # Start the EventMachine reactor (optionally in the foreground), unless it is
+  # running already.
+  #
+  def EventMachine::start background = true, &block
+    if reactor_running?
+      return unless block
+
+      next_tick do
+        begin
+          block.call
+        rescue Exception => e
+          puts e.inspect
+          raise
+        end
+      end
+
+      $eventmachine_reactor.join unless background
+    else
+      if background
+        $eventmachine_reactor = Thread.new do
+          Thread.current.abort_on_exception = true
+          run(&block)
+        end
+      else
+        run(&block)
+      end
+    end
+  end
 
 	# EventMachine::run initializes and runs an event loop.
 	# This method only returns if user-callback code calls stop_event_loop.
@@ -214,6 +230,8 @@ module EventMachine
 	# a C++ runtime error.
 	#
 	def EventMachine::run &block
+	  return block ? block.call : nil if @reactor_running
+
 		@conns = {}
 		@acceptors = {}
 		@timers = {}
@@ -280,20 +298,15 @@ module EventMachine
   # course, since no network clients or servers are defined. Stop the program
   # with Ctrl-C.
   #
-  #  require 'rubygems'
-  #  require 'eventmachine'
-  #
-  #  EventMachine::run {
-  #    puts "Starting the run now: #{Time.now}"
-  #    EventMachine::add_timer 5, proc { puts "Executing timer event: #{Time.now}" }
-  #    EventMachine::add_timer( 10 ) { puts "Executing timer event: #{Time.now}" }
-  #  }
+  #   :include: simple_timer.rb
   #
   #
   #--
   # Changed 04Oct06: We now pass the interval as an integer number of milliseconds.
   #
   def EventMachine::add_timer *args, &block
+    start
+
     interval = args.shift
     code = args.shift || block
     if code
@@ -321,6 +334,8 @@ module EventMachine
   #  }
   #
   def EventMachine::add_periodic_timer *args, &block
+    start
+
     interval = args.shift
     code = args.shift || block
     if code
@@ -354,42 +369,7 @@ module EventMachine
   #
   # === Usage example
   #
-  #  require 'rubygems'
-  #  require 'eventmachine'
-  #
-  #  module Redmond
-  #  
-  #    def post_init
-  #      puts "We're sending a dumb HTTP request to the remote peer."
-  #      send_data "GET / HTTP/1.1\r\nHost: www.microsoft.com\r\n\r\n"
-  #    end
-  #  
-  #    def receive_data data
-  #      puts "We received #{data.length} bytes from the remote peer."
-  #      puts "We're going to stop the event loop now."
-  #      EventMachine::stop_event_loop
-  #    end
-  #  
-  #    def unbind
-  #      puts "A connection has terminated."
-  #    end
-  #  
-  #  end
-  #  
-  #  puts "We're starting the event loop now."
-  #  EventMachine::run {
-  #    EventMachine::connect "www.microsoft.com", 80, Redmond
-  #  }
-  #  puts "The event loop has stopped."
-  #  
-  # This program will produce approximately the following output:
-  #
-  #  We're starting the event loop now.
-  #  We're sending a dumb HTTP request to the remote peer.
-  #  We received 1440 bytes from the remote peer.
-  #  We're going to stop the event loop now.
-  #  A connection has terminated.
-  #  The event loop has stopped.
+  #   :include: redmond.rb
   #
   #
   def EventMachine::stop_event_loop
@@ -452,39 +432,20 @@ module EventMachine
   # Also, to use this example, be sure to change the server and port parameters
   # to the start_server call to values appropriate for your environment.
   #
-  #  require 'rubygems'
-  #  require 'eventmachine'
+  #   :include: linecounter.rb
   #
-  #  module LineCounter
-  #  
-  #    MaxLinesPerConnection = 10
-  #  
-  #    def post_init
-  #      puts "Received a new connection"
-  #      @data_received = ""
-  #      @line_count = 0
-  #    end
-  #  
-  #    def receive_data data
-  #      @data_received << data
-  #      while @data_received.slice!( /^[^\n]*[\n]/m )
-  #        @line_count += 1
-  #        send_data "received #{@line_count} lines so far\r\n"
-  #        @line_count == MaxLinesPerConnection and close_connection_after_writing
-  #      end
-  #    end
-  #  
-  #  end # module LineCounter
-  #  
-  #  EventMachine::run {
-  #    host,port = "192.168.0.100", 8090
-  #    EventMachine::start_server host, port, LineCounter
-  #    puts "Now accepting connections on address #{host}, port #{port}..."
-  #    EventMachine::add_periodic_timer( 10 ) { $stderr.write "*" }
-  #  }
-  #  
   #
-  def EventMachine::start_server server, port, handler=nil, *args, &block
+  def EventMachine::start_server server, port=nil, handler=nil, *args, &block
+    start
+
+    begin
+      port = Integer(port)
+    rescue ArgumentError, TypeError
+      args.unshift handler
+      handler = port
+      port = nil
+    end if port
+
     klass = if (handler and handler.is_a?(Class))
       handler
     else
@@ -497,7 +458,11 @@ module EventMachine
       raise ArgumentError, "wrong number of arguments for #{klass}#initialize (#{args.size} for #{expected})" 
     end
 
-    s = start_tcp_server server, port
+    s = if port
+          start_tcp_server server, port
+        else
+          start_unix_server server
+        end
     @acceptors[s] = [klass,args,block]
     s
   end
@@ -512,21 +477,8 @@ module EventMachine
 	  EventMachine::stop_tcp_server signature
   end
 
-  def EventMachine::start_unix_domain_server filename, handler=nil, *args, &block
-    klass = if (handler and handler.is_a?(Class))
-      handler
-    else
-      Class.new( Connection ) {handler and include handler}
-    end
-
-    arity = klass.instance_method(:initialize).arity
-    expected = arity >= 0 ? arity : -(arity + 1)
-    if (arity >= 0 and args.size != expected) or (arity < 0 and args.size < expected)
-      raise ArgumentError, "wrong number of arguments for #{klass}#initialize (#{args.size} for #{expected})" 
-    end
-
-    s = start_unix_server filename
-    @acceptors[s] = [klass,args,block]
+  def EventMachine::start_unix_domain_server filename, *args, &block
+    start_server filename, *args, &block
   end
 
   # EventMachine#connect initiates a TCP connection to a remote
@@ -551,39 +503,8 @@ module EventMachine
   # (antisocially) ends the event loop, which automatically drops the connection
   # (and incidentally calls the connection's unbind method).
   # 
-  #  require 'rubygems'
-  #  require 'eventmachine'
-  #  
-  #  module DumbHttpClient
-  #  
-  #    def post_init
-  #      send_data "GET / HTTP/1.1\r\nHost: _\r\n\r\n"
-  #      @data = ""
-  #    end
-  #  
-  #    def receive_data data
-  #      @data << data
-  #      if  @data =~ /[\n][\r]*[\n]/m
-  #        puts "RECEIVED HTTP HEADER:"
-  #        $`.each {|line| puts ">>> #{line}" }
-  #  
-  #        puts "Now we'll terminate the loop, which will also close the connection"
-  #        EventMachine::stop_event_loop
-  #      end
-  #    end
-  #  
-  #    def unbind
-  #      puts "A connection has terminated"
-  #    end
-  #  
-  #  end # DumbHttpClient
-  #  
-  #  
-  #  EventMachine::run {
-  #    EventMachine::connect "www.bayshorenetworks.com", 80, DumbHttpClient
-  #  }
-  #  puts "The event loop has ended"
-  #  
+  #   :include: dumb_http_client.rb
+  #
   #
   # There are times when it's more convenient to define a protocol handler
   # as a Class rather than a Module. Here's how to do this:
@@ -626,7 +547,17 @@ module EventMachine
   # to have them behave differently with respect to post_init
   # if at all possible.
   #
-  def EventMachine::connect server, port, handler=nil, *args
+  def EventMachine::connect server, port=nil, handler=nil, *args
+    start
+
+    begin
+      port = Integer(port)
+    rescue ArgumentError, TypeError
+      args.unshift handler
+      handler = port
+      port = nil
+    end if port
+
     klass = if (handler and handler.is_a?(Class))
       handler
     else
@@ -639,7 +570,12 @@ module EventMachine
       raise ArgumentError, "wrong number of arguments for #{klass}#initialize (#{args.size} for #{expected})"
     end
 
-    s = connect_server server, port
+    s = if port
+          connect_server server, port
+        else
+          connect_unix_server server
+        end
+
     c = klass.new s, *args
     @conns[s] = c
     block_given? and yield c
@@ -686,24 +622,8 @@ module EventMachine
 	# For making connections to Unix-domain sockets.
 	# Eventually this has to get properly documented and unified with the TCP-connect methods.
 	# Note how nearly identical this is to EventMachine#connect
-	def EventMachine::connect_unix_domain socketname, handler=nil, *args
-		klass = if (handler and handler.is_a?(Class))
-			handler
-		else
-			Class.new( Connection ) {handler and include handler}
-		end
-
-    arity = klass.instance_method(:initialize).arity
-    expected = arity >= 0 ? arity : -(arity + 1)
-    if (arity >= 0 and args.size != expected) or (arity < 0 and args.size < expected)
-      raise ArgumentError, "wrong number of arguments for #{klass}#initialize (#{args.size} for #{expected})"
-    end
-
-		s = connect_unix_server socketname
-		c = klass.new s, *args
-		@conns[s] = c
-		block_given? and yield c
-		c
+	def EventMachine::connect_unix_domain socketname, *args
+	  connect socketname, *args
 	end
 
 
@@ -771,6 +691,8 @@ module EventMachine
 	# out that this originally did not take a class but only a module.
 	#
 	def self::open_datagram_socket address, port, handler=nil, *args
+		start
+
 		klass = if (handler and handler.is_a?(Class))
 			handler
 		else
@@ -1028,15 +950,21 @@ module EventMachine
 	# (Experimental)
 	#
 	#
-	def EventMachine::open_keyboard handler=nil
+	def EventMachine::open_keyboard handler=nil, *args
 		klass = if (handler and handler.is_a?(Class))
 			handler
 		else
 			Class.new( Connection ) {handler and include handler}
 		end
 
+		arity = klass.instance_method(:initialize).arity
+		expected = arity >= 0 ? arity : -(arity + 1)
+		if (arity >= 0 and args.size != expected) or (arity < 0 and args.size < expected)
+			raise ArgumentError, "wrong number of arguments for #{klass}#initialize (#{args.size} for #{expected})"
+		end
+
 		s = read_keyboard
-		c = klass.new s
+		c = klass.new s, *args
 		@conns[s] = c
 		block_given? and yield c
 		c
@@ -1546,6 +1474,7 @@ class Connection
 	#
 	#
 	class EventMachine::PeriodicTimer
+		attr_accessor :interval
 		def initialize *args, &block
 			@interval = args.shift
 			@code = args.shift || block
@@ -1611,5 +1540,3 @@ require 'protocols/smtpserver'
 require 'protocols/saslauth'
 
 require 'em/processes'
-
-

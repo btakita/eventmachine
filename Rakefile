@@ -85,7 +85,7 @@ spec = Gem::Specification.new do |s|
 	s.platform          = Gem::Platform::RUBY
 
 	s.has_rdoc          = true
-	s.rdoc_options      = %w(--title EventMachine --main README --line-numbers)
+	s.rdoc_options      = %w(--title EventMachine --main README --line-numbers --include=examples)
 	s.extra_rdoc_files = ["README",
 				"RELEASE_NOTES",
 				"COPYING",
@@ -101,7 +101,7 @@ spec = Gem::Specification.new do |s|
 				"DEFERRABLES"
 				]
 
-	s.files             = FileList["{bin,tests,lib,ext}/**/*"].exclude("rdoc").to_a
+	s.files             = FileList["{bin,tests,examples,lib,ext}/**/*"].exclude("rdoc").to_a
 
 	s.require_paths     = ["lib"]
 
@@ -203,8 +203,8 @@ if $can_minitar
     current = File.basename(Dir.pwd)
     Dir.chdir("..") do
       begin
-        files = %W(ext/**/*.rb ext/**/*.cpp ext/**/*.h bin/**/* lib/**/* tests/**/* README COPYING
-                 GNU LEGAL RELEASE_NOTES INSTALL EPOLL TODO KEYBOARD 
+        files = %W(ext/**/*.rb ext/**/*.cpp ext/**/*.h bin/**/* lib/**/* examples/**/* tests/**/* README COPYING
+                 GNU LEGAL RELEASE_NOTES INSTALL EPOLL TODO KEYBOARD
 		LIGHTWEIGHT_CONCURRENCY PURE_RUBY SMTP SPAWNED_PROCESSES DEFERRABLES setup.rb )
         files = FileList[files.map { |file| File.join(current, file) }].to_a
 	files = files.select {|f| f !~ /lib\/.*[\.](so|jar)\Z/i } # remove any so or jar files in the lib directory

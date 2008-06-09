@@ -627,10 +627,8 @@ void ConnectionDescriptor::_WriteOutboundData()
 		MyEventMachine->Modify (this);
 		#endif
 		#ifdef HAVE_KQUEUE
-		if (SelectForWrite()) {
+		if (SelectForWrite())
 			MyEventMachine->ArmKqueueWriter (this);
-			cerr << "POW\n";
-		}
 		#endif
 	}
 	else {
@@ -977,6 +975,21 @@ void AcceptorDescriptor::Heartbeat()
 }
 
 
+/*******************************
+AcceptorDescriptor::GetSockname
+*******************************/
+
+bool AcceptorDescriptor::GetSockname (struct sockaddr *s)
+{
+	bool ok = false;
+	if (s) {
+		socklen_t len = sizeof(*s);
+		int gp = getsockname (GetSocket(), s, &len);
+		if (gp == 0)
+			ok = true;
+	}
+	return ok;
+}
 
 
 /**************************************
